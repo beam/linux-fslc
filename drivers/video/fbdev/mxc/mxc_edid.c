@@ -39,144 +39,270 @@
 #endif
 
 const struct fb_videomode mxc_cea_mode[64] = {
-	/* #1: 640x480p@59.94/60Hz 4:3 */
+	/* #1: 640x480p@59.94/60Hz */
 	[1] = {
 		NULL, 60, 640, 480, 39722, 48, 16, 33, 10, 96, 2, 0,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_4_3, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_4_3, 0
 	},
 	/* #2: 720x480p@59.94/60Hz 4:3 */
 	[2] = {
 		NULL, 60, 720, 480, 37037, 60, 16, 30, 9, 62, 6, 0,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_4_3, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_4_3, 0
 	},
 	/* #3: 720x480p@59.94/60Hz 16:9 */
 	[3] = {
 		NULL, 60, 720, 480, 37037, 60, 16, 30, 9, 62, 6, 0,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
-	/* #4: 1280x720p@59.94/60Hz 16:9 */
+	/* #4: 1280x720p@59.94/60Hz */
 	[4] = {
 		NULL, 60, 1280, 720, 13468, 220, 110, 20, 5, 40, 5,
 		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
 		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
-	/* #5: 1920x1080i@59.94/60Hz 16:9 */
+	/* #5: 1920x1080i@59.94/60Hz */
 	[5] = {
-		NULL, 60, 1920, 1080, 13763, 148, 88, 15, 2, 44, 5,
+		NULL, 60, 1920, 1080, 13468, 148, 88, 31, 4, 44, 10,
 		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
-		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_16_9, 0,
+		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
+#ifdef	PIXEL_REPETITION_FIXED
 	/* #6: 720(1440)x480iH@59.94/60Hz 4:3 */
 	[6] = {
-		NULL, 60, 1440, 480, 18554/*37108*/, 114, 38, 15, 4, 124, 3, 0,
-		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_4_3, 0,
+		NULL, 60, 1440, 480, 37037, 114, 38, 30, 8, 124, 6, 0,
+		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_4_3, 0
 	},
 	/* #7: 720(1440)x480iH@59.94/60Hz 16:9 */
 	[7] = {
-		NULL, 60, 1440, 480, 18554/*37108*/, 114, 38, 15, 4, 124, 3, 0,
-		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_16_9, 0,
+		NULL, 60, 1440, 480, 37037, 114, 38, 30, 8, 124, 6, 0,
+		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
 	/* #8: 720(1440)x240pH@59.94/60Hz 4:3 */
 	[8] = {
-		NULL, 60, 1440, 240, 37108, 114, 38, 15, 4, 124, 3, 0,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_4_3, 0,
+		NULL, 60, 1440, 240, 37037, 114, 38, 15, 4, 124, 3, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_4_3, 0
 	},
 	/* #9: 720(1440)x240pH@59.94/60Hz 16:9 */
 	[9] = {
-		NULL, 60, 1440, 240, 37108, 114, 38, 15, 4, 124, 3, 0,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0,
+		NULL, 60, 1440, 240, 37037, 114, 38, 15, 4, 124, 3, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
+#endif
 	/* #14: 1440x480p@59.94/60Hz 4:3 */
 	[14] = {
-		NULL, 60, 1440, 480, 18500, 120, 32, 30, 9, 124, 6, 0,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_4_3, 0,
+		NULL, 60, 1440, 480, 18518, 120, 32, 30, 9, 124, 6, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_4_3, 0
 	},
 	/* #15: 1440x480p@59.94/60Hz 16:9 */
 	[15] = {
-		NULL, 60, 1440, 480, 18500, 120, 32, 30, 9, 124, 6, 0,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0,
+		NULL, 60, 1440, 480, 18518, 120, 32, 30, 9, 124, 6, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
-	/* #16: 1920x1080p@60Hz 16:9 */
+	/* #16: 1920x1080p@59.94/60Hz */
 	[16] = {
 		NULL, 60, 1920, 1080, 6734, 148, 88, 36, 4, 44, 5,
 		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
-	/* #17: 720x576pH@50Hz 4:3 */
+	/* #17: 720x576p@50Hz 4:3 */
 	[17] = {
 		NULL, 50, 720, 576, 37037, 68, 12, 39, 5, 64, 5, 0,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_4_3, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_4_3, 0
 	},
-	/* #18: 720x576pH@50Hz 16:9 */
+	/* #18: 720x576p@50Hz 16:9 */
 	[18] = {
 		NULL, 50, 720, 576, 37037, 68, 12, 39, 5, 64, 5, 0,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
 	/* #19: 1280x720p@50Hz */
 	[19] = {
 		NULL, 50, 1280, 720, 13468, 220, 440, 20, 5, 40, 5,
 		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
 	/* #20: 1920x1080i@50Hz */
 	[20] = {
-		NULL, 50, 1920, 1080, 13480, 148, 528, 15, 5, 528, 5,
+		NULL, 50, 1920, 1080, 13468, 148, 528, 31, 4, 44, 10,
 		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
-		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_16_9, 0,
+		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_16_9, 0
+	},
+#ifdef	PIXEL_REPETITION_FIXED
+	/* #21: 720(1440)x576iH@50Hz 4:3 */
+	[21] = {
+		NULL, 50, 1440, 576, 37037, 138, 24, 38, 4, 126, 6, 0,
+		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_4_3, 0
+	},
+	/* #22: 720(1440)x576iH@50Hz 16:9 */
+	[22] = {
+		NULL, 50, 1440, 576, 37037, 138, 24, 38, 4, 126, 6, 0,
+		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
 	/* #23: 720(1440)x288pH@50Hz 4:3 */
 	[23] = {
 		NULL, 50, 1440, 288, 37037, 138, 24, 19, 2, 126, 3, 0,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_4_3, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_4_3, 0
 	},
 	/* #24: 720(1440)x288pH@50Hz 16:9 */
 	[24] = {
 		NULL, 50, 1440, 288, 37037, 138, 24, 19, 2, 126, 3, 0,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
-	/* #29: 720(1440)x576pH@50Hz 4:3 */
+#endif
+	/* #29: 1440x576p@50Hz 4:3 */
 	[29] = {
 		NULL, 50, 1440, 576, 18518, 136, 24, 39, 5, 128, 5, 0,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_4_3, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_4_3, 0
 	},
-	/* #30: 720(1440)x576pH@50Hz 16:9 */
+	/* #30: 1440x576p@50Hz 16:9 */
 	[30] = {
 		NULL, 50, 1440, 576, 18518, 136, 24, 39, 5, 128, 5, 0,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
 	/* #31: 1920x1080p@50Hz */
 	[31] = {
 		NULL, 50, 1920, 1080, 6734, 148, 528, 36, 4, 44, 5,
 		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
-	/* #32: 1920x1080p@23.98/24Hz */
+	/* #32: 1920x1080p@23.97/24Hz */
 	[32] = {
 		NULL, 24, 1920, 1080, 13468, 148, 638, 36, 4, 44, 5,
 		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
 	/* #33: 1920x1080p@25Hz */
 	[33] = {
 		NULL, 25, 1920, 1080, 13468, 148, 528, 36, 4, 44, 5,
 		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
-	/* #34: 1920x1080p@30Hz */
+	/* #34: 1920x1080p@29.97/30Hz */
 	[34] = {
 		NULL, 30, 1920, 1080, 13468, 148, 88, 36, 4, 44, 5,
 		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
-		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
-	/* #41: 1280x720p@100Hz 16:9 */
+	/* #40: 1920x1080i@100Hz */
+	[40] = {
+		NULL, 100, 1920, 1080, 6734, 148, 528, 31, 4, 44, 10,
+		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_16_9, 0
+	},
+	/* #41: 1280x720p@100Hz */
 	[41] = {
 		NULL, 100, 1280, 720, 6734, 220, 440, 20, 5, 40, 5,
 		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
 		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
-	/* #47: 1280x720p@119.88/120Hz 16:9 */
+	/* #42: 720x576p@100Hz 4:3 */
+	[42] = {
+		NULL, 100, 720, 576, 18518, 68, 12, 39, 5, 64, 5, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_4_3, 0
+	},
+	/* #43: 720x576p@100Hz 16:9 */
+	[43] = {
+		NULL, 100, 720, 576, 18518, 68, 12, 39, 5, 64, 5, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
+	},
+#ifdef	PIXEL_REPETITION_FIXED
+	/* #44: 720(1440)x576iH@100Hz 4:3 */
+	[44] = {
+		NULL, 100, 1440, 576, 18518, 138, 24, 38, 4, 126, 6, 0,
+		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_4_3, 0
+	},
+	/* #45: 720(1440)x576iH@100Hz 16:9 */
+	[45] = {
+		NULL, 100, 1440, 576, 18518, 138, 24, 38, 4, 126, 6, 0,
+		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_16_9, 0
+	},
+#endif
+	/* #46: 1920x1080i@119.88/120Hz */
+	[46] = {
+		NULL, 120, 1920, 1080, 6734, 148, 88, 31, 4, 44, 10,
+		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_16_9, 0
+	},
+	/* #47: 1280x720p@119.88/120Hz */
 	[47] = {
 		NULL, 120, 1280, 720, 6734, 220, 110, 20, 5, 40, 5,
+		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
+	},
+	/* #48: 720x480p@119.88/120Hz 4:3 */
+	[48] = {
+		NULL, 120, 720, 480, 18518, 60, 16, 30, 9, 62, 6, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_4_3, 0
+	},
+	/* #49: 720x480p@119.88/120Hz 16:9 */
+	[49] = {
+		NULL, 120, 720, 480, 18518, 60, 16, 30, 9, 62, 6, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
+	},
+#ifdef	PIXEL_REPETITION_FIXED
+	/* #50: 720(1440)x480iH@119.88/120Hz 4:3 */
+	[50] = {
+		NULL, 120, 1440, 480, 18518, 114, 38, 30, 8, 124, 6, 0,
+		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_4_3, 0
+	},
+	/* #51: 720(1440)x480iH@119.88/120Hz 16:9 */
+	[51] = {
+		NULL, 120, 1440, 480, 18518, 114, 38, 30, 8, 124, 6, 0,
+		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_16_9, 0
+	},
+#endif
+	/* #52: 720x576p@200Hz 4:3 */
+	[52] = {
+		NULL, 200, 720, 576, 9259, 68, 12, 39, 5, 64, 5, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_4_3, 0
+	},
+	/* #53: 720x576p@200Hz 16:9 */
+	[53] = {
+		NULL, 200, 720, 576, 9259, 68, 12, 39, 5, 64, 5, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
+	},
+#ifdef	PIXEL_REPETITION_FIXED
+	/* #54: 720(1440)x576iH@200Hz 4:3 */
+	[54] = {
+		NULL, 200, 1440, 576, 9259, 138, 24, 38, 4, 126, 6, 0,
+		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_4_3, 0
+	},
+	/* #55: 720(1440)x576iH@200Hz 16:9 */
+	[55] = {
+		NULL, 200, 1440, 576, 9259, 138, 24, 38, 4, 126, 6, 0,
+		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_16_9, 0
+	},
+#endif
+	/* #56: 720x480p@239.76/240Hz 4:3 */
+	[56] = {
+		NULL, 240, 720, 480, 9259, 60, 16, 30, 9, 62, 6, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_4_3, 0
+	},
+	/* #57: 720x480p@239.76/240Hz 16:9 */
+	[57] = {
+		NULL, 240, 720, 480, 9259, 60, 16, 30, 9, 62, 6, 0,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
+	},
+#ifdef	PIXEL_REPETITION_FIXED
+	/* #58: 720(1440)x480iH@239.76/240Hz 4:3 */
+	[58] = {
+		NULL, 240, 1440, 480, 9259, 114, 38, 30, 8, 124, 6, 0,
+		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_4_3, 0
+	},
+	/* #59: 720(1440)x480iH@239.76/240Hz 16:9 */
+	[59] = {
+		NULL, 240, 1440, 480, 9259, 114, 38, 30, 8, 124, 6, 0,
+		FB_VMODE_INTERLACED | FB_VMODE_ASPECT_16_9, 0
+	},
+#endif
+	/* #61: 1280x720p@25Hz */
+	[61] = {
+		NULL, 25, 1280, 720, 13468, 220, 2420, 20, 5, 40, 5,
+		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
+	},
+	/* #62: 1280x720p@29.97/30Hz */
+	[62] = {
+		NULL, 30, 1280, 720, 13468, 220, 1760, 20, 5, 40, 5,
 		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
 		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
@@ -212,6 +338,59 @@ int mxc_edid_fb_mode_is_equal(bool use_aspect,
 		abs(mode1->refresh - mode2->refresh) <= 1 &&
 		(mode1->vmode & mask) == (mode2->vmode & mask));
 }
+EXPORT_SYMBOL(mxc_edid_fb_mode_is_equal);
+
+int mxc_edid_external_get(struct i2c_adapter *adp, unsigned short addr,
+				  unsigned char *data, int num_blocks_max)
+{
+	int ret, msg_ofs, block_num = 0, num_ext_blocks = 0;
+	unsigned char segment, regaddr;
+	struct i2c_msg msg[3] = {
+		{
+		.addr	= 0x30,
+		.flags	= 0,
+		.len	= 1,
+		.buf	= &segment,
+		}, {
+		.addr	= addr,
+		.flags	= 0,
+		.len	= 1,
+		.buf	= &regaddr,
+		}, {
+		.addr	= addr,
+		.flags	= I2C_M_RD,
+		.len	= EDID_LENGTH,
+		.buf	= data,
+		},
+	};
+
+	do {
+		regaddr = (block_num & 1) * EDID_LENGTH;
+		segment = block_num >> 1;
+		msg_ofs = (segment == 0) ? 1 : 0;
+
+		ret = i2c_transfer(adp, msg + msg_ofs, ARRAY_SIZE(msg) - msg_ofs);
+		if (ret != ARRAY_SIZE(msg) - msg_ofs) {
+			dev_err(&adp->dev, "EDID external failed to read block %d\n", block_num);
+			return -EIO;
+		}
+
+		msg[2].buf += EDID_LENGTH;
+
+		if (block_num++ == 0) {
+			if (!mxc_edid_get_ext_blks(data, &num_ext_blocks)) {
+				dev_err(&adp->dev, "EDID external header check failed!");
+				return -ENOENT;
+			}
+
+			if (num_ext_blocks > num_blocks_max - 1)
+				num_ext_blocks = num_blocks_max - 1;
+		}
+	} while (block_num <= num_ext_blocks);
+
+	return num_ext_blocks;
+}
+EXPORT_SYMBOL(mxc_edid_external_get);
 
 static void get_detailed_timing(unsigned char *block,
 				struct fb_videomode *mode)
@@ -266,9 +445,8 @@ static void get_detailed_timing(unsigned char *block,
 	       (VSYNC_POSITIVE) ? "+" : "-");
 }
 
-int mxc_edid_parse_ext_blk(unsigned char *edid,
-		struct mxc_edid_cfg *cfg,
-		struct fb_monspecs *specs)
+static int parse_ext_blk(unsigned char *edid,
+		struct mxc_edid_cfg *cfg, struct fb_monspecs *specs)
 {
 	char detail_timing_desc_offset;
 	struct fb_videomode *mode, *m;
@@ -280,14 +458,12 @@ int mxc_edid_parse_ext_blk(unsigned char *edid,
 		return 0;
 	revision = edid[index++];
 	DPRINTK("cea extent revision %d\n", revision);
-	mode = kzalloc(50 * sizeof(struct fb_videomode), GFP_KERNEL);
+	mode = kzalloc((ARRAY_SIZE(mxc_cea_mode) + 8) * 
+			sizeof(struct fb_videomode), GFP_KERNEL);
 	if (mode == NULL)
 		return -1;
 
 	detail_timing_desc_offset = edid[index++];
-
-	memset(cfg->sample_rates, 0, sizeof(cfg->sample_rates));
-	memset(cfg->sample_sizes, 0, sizeof(cfg->sample_sizes));
 
 	if (revision >= 2) {
 		cfg->cea_underscan = (edid[index] >> 7) & 0x1;
@@ -339,7 +515,7 @@ int mxc_edid_parse_ext_blk(unsigned char *edid,
 				}
 			case 0x3: /*Vendor specific data*/
 				{
-					unsigned char IEEE_reg_iden[3];
+					unsigned      IEEE_reg_iden;
 					unsigned char deep_color;
 					unsigned char latency_present;
 					unsigned char I_latency_present;
@@ -348,23 +524,29 @@ int mxc_edid_parse_ext_blk(unsigned char *edid,
 					unsigned char hdmi_3d_multi_present;
 					unsigned char hdmi_vic_len;
 					unsigned char hdmi_3d_len;
-					unsigned char index_inc = 0;
+					unsigned char index_inc;
 					unsigned char vsd_end;
 
-					vsd_end = index + blklen;
+					IEEE_reg_iden = (blklen > 2) ?
+						((edid[index+3] << 16) | (edid[index+2] << 8) | edid[index+1]) : 0;
 
-					IEEE_reg_iden[0] = edid[index+1];
-					IEEE_reg_iden[1] = edid[index+2];
-					IEEE_reg_iden[2] = edid[index+3];
-					cfg->physical_address[0] = (edid[index+4] & 0xf0) >> 4;
-					cfg->physical_address[1] = (edid[index+4] & 0x0f);
-					cfg->physical_address[2] = (edid[index+5] & 0xf0) >> 4;
-					cfg->physical_address[3] = (edid[index+5] & 0x0f);
+					if (IEEE_reg_iden != 0x000c03) {
+						DPRINTK("VSD block OUI=0x%06x (unknown) present\n", IEEE_reg_iden);
+						index += blklen;
+						break;
+					}
 
-					if ((IEEE_reg_iden[0] == 0x03) &&
-							(IEEE_reg_iden[1] == 0x0c) &&
-							(IEEE_reg_iden[2] == 0x00))
-						cfg->hdmi_cap = 1;
+					DPRINTK("VSD block HDMI 1.x 'HDMI Licensing, LLC' present\n");
+
+					cfg->hdmi_cap = 1;
+					cfg->physical_address[0] = edid[index+4] >> 4;
+					cfg->physical_address[1] = edid[index+4] & 0x0f;
+					cfg->physical_address[2] = edid[index+5] >> 4;
+					cfg->physical_address[3] = edid[index+5] & 0x0f;
+
+					DPRINTK("VSD physical address 0x%x%x%x%x\n",
+						cfg->physical_address[0], cfg->physical_address[1],
+						cfg->physical_address[2], cfg->physical_address[3]);
 
 					if (blklen > 5) {
 						deep_color = edid[index+6];
@@ -382,7 +564,6 @@ int mxc_edid_parse_ext_blk(unsigned char *edid,
 							cfg->vsd_dvi_dual = true;
 					}
 
-					DPRINTK("VSD hdmi capability %d\n", cfg->hdmi_cap);
 					DPRINTK("VSD support ai %d\n", cfg->vsd_support_ai);
 					DPRINTK("VSD support deep color 48bit %d\n", cfg->vsd_dc_48bit);
 					DPRINTK("VSD support deep color 36bit %d\n", cfg->vsd_dc_36bit);
@@ -416,6 +597,7 @@ int mxc_edid_parse_ext_blk(unsigned char *edid,
 						break;
 					}
 
+					vsd_end = index + blklen;
 					index += 9;
 
 					/*latency present */
@@ -458,6 +640,8 @@ int mxc_edid_parse_ext_blk(unsigned char *edid,
 						}
 
 						if (hdmi_3d_len > 0) {
+							index_inc = 0;
+
 							if (hdmi_3d_present) {
 								if (hdmi_3d_multi_present == 0x1) {
 									cfg->hdmi_3d_struct_all = (edid[index] << 8) | edid[index+1];
@@ -466,8 +650,7 @@ int mxc_edid_parse_ext_blk(unsigned char *edid,
 									cfg->hdmi_3d_struct_all = (edid[index] << 8) | edid[index+1];
 									cfg->hdmi_3d_mask_all = (edid[index+2] << 8) | edid[index+3];
 									index_inc = 4;
-								} else
-									index_inc = 0;
+								}
 							}
 
 							DPRINTK("HDMI 3d struct all =0x%x\n", cfg->hdmi_3d_struct_all);
@@ -503,7 +686,6 @@ int mxc_edid_parse_ext_blk(unsigned char *edid,
 					}
 
 					index = vsd_end;
-
 					break;
 				}
 			case 0x1: /*Audio data block*/
@@ -610,151 +792,110 @@ int mxc_edid_parse_ext_blk(unsigned char *edid,
 		return 0;
 	}
 
+	memcpy(m, mode, num * sizeof(struct fb_videomode));
+	kfree(mode);
+
 	if (specs->modedb_len) {
-		memmove(m, specs->modedb,
-			specs->modedb_len * sizeof(struct fb_videomode));
+		memcpy(m + num, specs->modedb,
+		       specs->modedb_len * sizeof(struct fb_videomode));
 		kfree(specs->modedb);
 	}
-	memmove(m+specs->modedb_len, mode,
-		num * sizeof(struct fb_videomode));
-	kfree(mode);
 
 	specs->modedb_len += num;
 	specs->modedb = m;
 
+	/* Remove FB_MODE_IS_STANDARD if an alternate aspect ratio exists.
+	   This allows to distiguish between 16:9 and 4:3 modes in sysfs. */
+	for (mode = &specs->modedb[1]; mode < &specs->modedb[specs->modedb_len]; mode++) {
+		if (mode->flag != FB_MODE_IS_STANDARD || !(mode->vmode & FB_VMODE_ASPECT_MASK))
+			continue;
+
+		mode->vmode ^= FB_VMODE_ASPECT_MASK;
+		for (m = mode - 1; m >= specs->modedb; m--) {
+		      if (fb_mode_is_equal(mode, m)) {
+			      mode->flag &= ~FB_MODE_IS_STANDARD;
+			      break;
+		      }
+		}
+		mode->vmode ^= FB_VMODE_ASPECT_MASK;
+	}
+
 	return 0;
 }
-EXPORT_SYMBOL(mxc_edid_parse_ext_blk);
 
-unsigned char *override_edid;
-
-void mxc_set_edid_address(unsigned char *edid)
+int mxc_edid_get_ext_blks(unsigned char *edid, int *num_ext_blocks)
 {
-	pr_debug("%s: edid=%p\n", __func__, edid);
-	override_edid = edid;
-}
-EXPORT_SYMBOL(mxc_set_edid_address);
-
-static int mxc_edid_override(struct i2c_adapter *adp,
-		unsigned short addr, unsigned char *edid)
-{
-	int extblknum = 0;
-	unsigned char *slim_edid = override_edid;
-	memcpy(edid, slim_edid, EDID_LENGTH);
-
-	pr_debug("%s: for slim\n", __func__);
-	extblknum = edid[0x7E];
-	if (extblknum)
-		memcpy(edid + EDID_LENGTH, slim_edid + EDID_LENGTH, EDID_LENGTH);
-	return extblknum;
-}
-
-static int mxc_edid_readblk(struct i2c_adapter *adp,
-		unsigned short addr, unsigned char *edid)
-{
-	int ret = 0, extblknum = 0;
-	unsigned char regaddr = 0x0;
-	struct i2c_msg msg[2] = {
-		{
-		.addr	= addr,
-		.flags	= 0,
-		.len	= 1,
-		.buf	= &regaddr,
-		}, {
-		.addr	= addr,
-		.flags	= I2C_M_RD,
-		.len	= EDID_LENGTH,
-		.buf	= edid,
-		},
+	static const u8 edid_header[] = {
+		0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00
 	};
 
-	if (override_edid)
-		return mxc_edid_override(adp, addr, edid);
-
-	ret = i2c_transfer(adp, msg, ARRAY_SIZE(msg));
-	if (ret != ARRAY_SIZE(msg)) {
-		DPRINTK("unable to read EDID block\n");
-		return -EIO;
+	if (memcmp(edid, edid_header, sizeof(edid_header)) == 0) {
+		*num_ext_blocks = (edid[0x7E] == 0xFF) ? 0 : edid[0x7E];
+		return 1;
 	}
 
-	if (edid[1] == 0x00)
-		return -ENOENT;
+	return 0;
+}
+EXPORT_SYMBOL(mxc_edid_get_ext_blks);
 
-	extblknum = edid[0x7E];
+void mxc_edid_parse(unsigned char *edid,
+	int num_ext_blocks, struct mxc_edid_cfg *cfg, struct fb_info *fbi)
+{
+	struct fb_videomode *m;
 
-	if (extblknum) {
-		regaddr = 128;
-		msg[1].buf = edid + EDID_LENGTH;
+	if (!edid || !cfg || !fbi)
+		return;
 
-		ret = i2c_transfer(adp, msg, ARRAY_SIZE(msg));
-		if (ret != ARRAY_SIZE(msg)) {
-			DPRINTK("unable to read EDID ext block\n");
-			return -EIO;
+	/* Free old monspecs */
+	if (fbi->monspecs.modedb_len > 0)
+		fb_destroy_modedb(fbi->monspecs.modedb);
+
+	/* edid first block parsing */
+	memset(&fbi->monspecs, 0, sizeof(fbi->monspecs));
+	fb_edid_to_monspecs(edid, &fbi->monspecs);
+
+	for (m = fbi->monspecs.modedb; m < fbi->monspecs.modedb + fbi->monspecs.modedb_len; m++) {
+		if (m->xres / 16 == m->yres / 9)
+			m->vmode |= FB_VMODE_ASPECT_16_9;
+		else if (m->xres / 4 == m->yres / 3)
+			m->vmode |= FB_VMODE_ASPECT_4_3;
+
+		/* HACK: Our IPU doesn't like some timings calculated by the VESA formula.
+		   Especially, a lower margin below 2 is not acceptable. So let's increase
+		   the vertical blanking intervall a bit in this situation */
+		if (m->lower_margin <= 1) {
+			m->lower_margin += 2;
+			m->vsync_len += 2;
+			m->pixclock = KHZ2PICOS(((m->xres + m->left_margin + m->right_margin + m->hsync_len) *
+						  (m->yres + m->upper_margin + m->lower_margin + m->vsync_len) *
+						  m->refresh) / (1000 << !!(m->vmode & FB_VMODE_INTERLACED)));
+			pr_warn("%s: Vertical blanking adjusted for %dx%d%c-%d. Please check modedb!\n",
+				__func__, m->xres, m->yres, (m->vmode & FB_VMODE_INTERLACED) ? 'i' : 'p', m->refresh);
 		}
 	}
 
-	return extblknum;
-}
-
-static int mxc_edid_readsegblk(struct i2c_adapter *adp, unsigned short addr,
-			unsigned char *edid, int seg_num)
-{
-	int ret = 0;
-	unsigned char segment = 0x1, regaddr = 0;
-	struct i2c_msg msg[3] = {
-		{
-		.addr	= 0x30,
-		.flags	= 0,
-		.len	= 1,
-		.buf	= &segment,
-		}, {
-		.addr	= addr,
-		.flags	= 0,
-		.len	= 1,
-		.buf	= &regaddr,
-		}, {
-		.addr	= addr,
-		.flags	= I2C_M_RD,
-		.len	= EDID_LENGTH,
-		.buf	= edid,
-		},
-	};
-
-	ret = i2c_transfer(adp, msg, ARRAY_SIZE(msg));
-	if (ret != ARRAY_SIZE(msg)) {
-		DPRINTK("unable to read EDID block\n");
-		return -EIO;
+	/* edid extension block parsing */
+	memset(cfg, 0, sizeof(struct mxc_edid_cfg));
+	while (num_ext_blocks-- > 0) {
+		edid += EDID_LENGTH;
+		parse_ext_blk(edid, cfg, &fbi->monspecs);
 	}
-
-	if (seg_num == 2) {
-		regaddr = 128;
-		msg[2].buf = edid + EDID_LENGTH;
-
-		ret = i2c_transfer(adp, msg, ARRAY_SIZE(msg));
-		if (ret != ARRAY_SIZE(msg)) {
-			DPRINTK("unable to read EDID block\n");
-			return -EIO;
-		}
-	}
-
-	return ret;
 }
+EXPORT_SYMBOL(mxc_edid_parse);
 
-int mxc_edid_var_to_vic(struct fb_var_screeninfo *var)
+int mxc_edid_var_to_vic(const struct fb_var_screeninfo *var)
 {
 	int i;
 	struct fb_videomode m;
 
+	fb_var_to_videomode(&m, var);
+
 	for (i = 0; i < ARRAY_SIZE(mxc_cea_mode); i++) {
-		fb_var_to_videomode(&m, var);
 		if (mxc_edid_fb_mode_is_equal(false, &m, &mxc_cea_mode[i]))
-			break;
+			return i;
 	}
 
-	if (i == ARRAY_SIZE(mxc_cea_mode))
-		return 0;
-
-	return i;
+	return 0;
 }
 EXPORT_SYMBOL(mxc_edid_var_to_vic);
 
@@ -765,105 +906,48 @@ int mxc_edid_mode_to_vic(const struct fb_videomode *mode)
 
 	for (i = 0; i < ARRAY_SIZE(mxc_cea_mode); i++) {
 		if (mxc_edid_fb_mode_is_equal(use_aspect, mode, &mxc_cea_mode[i]))
-			break;
-	}
-
-	if (i == ARRAY_SIZE(mxc_cea_mode))
-		return 0;
-
-	return i;
-}
-EXPORT_SYMBOL(mxc_edid_mode_to_vic);
-
-/* make sure edid has 512 bytes*/
-int mxc_edid_read(struct i2c_adapter *adp, unsigned short addr,
-	unsigned char *edid, struct mxc_edid_cfg *cfg, struct fb_info *fbi)
-{
-	int ret = 0, extblknum;
-	if (!adp || !edid || !cfg || !fbi)
-		return -EINVAL;
-
-	memset(edid, 0, EDID_LENGTH*4);
-	memset(cfg, 0, sizeof(struct mxc_edid_cfg));
-
-	extblknum = mxc_edid_readblk(adp, addr, edid);
-	if (extblknum < 0)
-		return extblknum;
-
-	/* edid first block parsing */
-	memset(&fbi->monspecs, 0, sizeof(fbi->monspecs));
-	fb_edid_to_monspecs(edid, &fbi->monspecs);
-
-	if (extblknum) {
-		int i;
-
-		/* FIXME: mxc_edid_readsegblk() won't read more than 2 blocks
-		 * and the for-loop will read past the end of the buffer! :-( */
-		if (extblknum > 3) {
-			WARN_ON(true);
-			return -EINVAL;
-		}
-
-		/* need read segment block? */
-		if (extblknum > 1) {
-			ret = mxc_edid_readsegblk(adp, addr,
-				edid + EDID_LENGTH*2, extblknum - 1);
-			if (ret < 0)
-				return ret;
-		}
-
-		for (i = 1; i <= extblknum; i++)
-			/* edid ext block parsing */
-			mxc_edid_parse_ext_blk(edid + i*EDID_LENGTH,
-					cfg, &fbi->monspecs);
+			return i;
 	}
 
 	return 0;
 }
-EXPORT_SYMBOL(mxc_edid_read);
+EXPORT_SYMBOL(mxc_edid_mode_to_vic);
 
 const struct fb_videomode *mxc_fb_find_nearest_mode(const struct fb_videomode *mode,
-						    struct list_head *head, bool relax)
+						    struct list_head *head)
 {
 	struct list_head *pos;
 	struct fb_modelist *modelist;
-	struct fb_videomode *cmode;
-	static struct fb_videomode *best;
-	static u32 diff, diff_refresh;
-	u32 mask = relax ? FB_VMODE_MASK | FB_VMODE_ASPECT_MASK : ~0;
+	u32 i, d, diff = -1, diff_refresh = -1;
+	struct fb_videomode *cmode, *best = NULL;
+	static const u32 masks[] = { ~0, ~FB_VMODE_ASPECT_MASK };
 
-	if (!relax) {
-		diff = -1;
-		diff_refresh = -1;
-		best = NULL;
-	}
+	for (i = 0; i < ARRAY_SIZE(masks); i++) {
+		list_for_each(pos, head) {
+			modelist = list_entry(pos, struct fb_modelist, list);
+			cmode = &modelist->mode;
 
-	list_for_each(pos, head) {
-		u32 d;
-
-		modelist = list_entry(pos, struct fb_modelist, list);
-		cmode = &modelist->mode;
-
-		if ((mode->vmode ^ cmode->vmode) & mask)
+			if ((mode->vmode ^ cmode->vmode) & masks[i])
 				continue;
 
-		d = abs(cmode->xres - mode->xres) +
-			abs(cmode->yres - mode->yres);
-		if (diff > d) {
-			diff = d;
-			diff_refresh = abs(cmode->refresh - mode->refresh);
-			best = cmode;
-		} else if (diff == d) {
-			d = abs(cmode->refresh - mode->refresh);
-			if (diff_refresh > d) {
-				diff_refresh = d;
+			d = abs(cmode->xres - mode->xres) +
+				abs(cmode->yres - mode->yres);
+			if (diff > d) {
+				diff = d;
+				diff_refresh = abs(cmode->refresh - mode->refresh);
 				best = cmode;
+			} else if (diff == d) {
+				d = abs(cmode->refresh - mode->refresh);
+				if (diff_refresh > d) {
+					diff_refresh = d;
+					best = cmode;
+				}
 			}
+
+			if (diff == 0 && diff_refresh == 0)
+				return best;
 		}
 	}
-
-	if ((!relax && (diff_refresh || diff)) || !best)
-		mxc_fb_find_nearest_mode(mode, head, true);
 
 	return best;
 }

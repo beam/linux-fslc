@@ -74,11 +74,11 @@
 #define XVYCC444            4
 
 static int only_cea = 1;
-module_param(only_cea, int, 0644);
+module_param(only_cea, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(only_cea, "Allow only CEA modes");
 
-static int keepalive = 1;
-module_param(keepalive, int, 0644);
+static int keepalive = 0;
+module_param(keepalive, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(keepalive, "Keep HDMI PHY running when unplugged");
 
 /*
@@ -180,6 +180,7 @@ struct mxc_hdmi {
 	struct fb_videomode default_mode;
 	struct fb_videomode previous_non_vga_mode;
 	bool requesting_vga_for_initialization;
+	bool allow_non_cea;
 
 	int *gpr_base;
 	int *gpr_hdmi_base;
@@ -1401,8 +1402,8 @@ static void hdmi_config_AVI(struct mxc_hdmi *hdmi)
 	fb_var_to_videomode(&mode, &hdmi->fbi->var);
 	/* Use mode from list extracted from EDID to get aspect ratio */
 	if (!list_empty(&hdmi->fbi->modelist)) {
-		edid_mode = fb_find_nearest_mode(&mode, &hdmi->fbi->modelist);
-		if (edid_mode->vmode & FB_VMODE_ASPECT_16_9)
+		edid_mode = mxc_fb_find_nearest_mode(&mode, &hdmi->fbi->modelist);
+		if (edid_mode && (edid_mode->vmode & FB_VMODE_ASPECT_16_9))
 			aspect_16_9 = true;
 		else
 			aspect_16_9 = false;
@@ -1519,7 +1520,7 @@ static void hdmi_config_AVI(struct mxc_hdmi *hdmi)
  */
 static void hdmi_av_composer(struct mxc_hdmi *hdmi)
 {
-	u8 inv_val;
+	u8 inv_val, vshift;
 	struct fb_info *fbi = hdmi->fbi;
 	struct fb_videomode fb_mode;
 	struct hdmi_vmode *vmode = &hdmi->hdmi_data.video_mode;
@@ -1529,13 +1530,15 @@ static void hdmi_av_composer(struct mxc_hdmi *hdmi)
 
 	fb_var_to_videomode(&fb_mode, &fbi->var);
 
+	vshift = (fb_mode.vmode & FB_VMODE_INTERLACED) ? 1 : 0;
+
 	vmode->mHSyncPolarity = ((fb_mode.sync & FB_SYNC_HOR_HIGH_ACT) != 0);
 	vmode->mVSyncPolarity = ((fb_mode.sync & FB_SYNC_VERT_HIGH_ACT) != 0);
 	vmode->mInterlaced = ((fb_mode.vmode & FB_VMODE_INTERLACED) != 0);
-	vmode->mPixelClock = (fb_mode.xres + fb_mode.left_margin +
+	vmode->mPixelClock = ((fb_mode.xres + fb_mode.left_margin +
 		fb_mode.right_margin + fb_mode.hsync_len) * (fb_mode.yres +
 		fb_mode.upper_margin + fb_mode.lower_margin +
-		fb_mode.vsync_len) * fb_mode.refresh;
+		fb_mode.vsync_len) * fb_mode.refresh) >> vshift;
 
 	dev_dbg(&hdmi->pdev->dev, "final pixclk = %d\n", vmode->mPixelClock);
 
@@ -1577,9 +1580,9 @@ static void hdmi_av_composer(struct mxc_hdmi *hdmi)
 	hdmi_writeb(fb_mode.xres >> 8, HDMI_FC_INHACTV1);
 	hdmi_writeb(fb_mode.xres, HDMI_FC_INHACTV0);
 
-	/* Set up vertical blanking pixel region width */
-	hdmi_writeb(fb_mode.yres >> 8, HDMI_FC_INVACTV1);
-	hdmi_writeb(fb_mode.yres, HDMI_FC_INVACTV0);
+	/* Set up vertical active pixel region width */
+	hdmi_writeb((fb_mode.yres >> vshift) >> 8, HDMI_FC_INVACTV1);
+	hdmi_writeb(fb_mode.yres >> vshift, HDMI_FC_INVACTV0);
 
 	/* Set up horizontal blanking pixel region width */
 	hblank = fb_mode.left_margin + fb_mode.right_margin +
@@ -1590,95 +1593,50 @@ static void hdmi_av_composer(struct mxc_hdmi *hdmi)
 	/* Set up vertical blanking pixel region width */
 	vblank = fb_mode.upper_margin + fb_mode.lower_margin +
 		fb_mode.vsync_len;
-	hdmi_writeb(vblank, HDMI_FC_INVBLANK);
+	hdmi_writeb(vblank >> vshift, HDMI_FC_INVBLANK);
 
 	/* Set up HSYNC active edge delay width (in pixel clks) */
 	hdmi_writeb(fb_mode.right_margin >> 8, HDMI_FC_HSYNCINDELAY1);
 	hdmi_writeb(fb_mode.right_margin, HDMI_FC_HSYNCINDELAY0);
 
-	/* Set up VSYNC active edge delay (in pixel clks) */
-	hdmi_writeb(fb_mode.lower_margin, HDMI_FC_VSYNCINDELAY);
+	/* Set up VSYNC active edge delay (in scan lines) */
+	hdmi_writeb(fb_mode.lower_margin >> vshift, HDMI_FC_VSYNCINDELAY);
 
 	/* Set up HSYNC active pulse width (in pixel clks) */
 	hdmi_writeb(fb_mode.hsync_len >> 8, HDMI_FC_HSYNCINWIDTH1);
 	hdmi_writeb(fb_mode.hsync_len, HDMI_FC_HSYNCINWIDTH0);
 
-	/* Set up VSYNC active edge delay (in pixel clks) */
-	hdmi_writeb(fb_mode.vsync_len, HDMI_FC_VSYNCINWIDTH);
+	/* Set up VSYNC active pulse width (in scan lines) */
+	hdmi_writeb(fb_mode.vsync_len >> vshift, HDMI_FC_VSYNCINWIDTH);
 
 	dev_dbg(&hdmi->pdev->dev, "%s exit\n", __func__);
 }
 
-static int mxc_edid_override(struct mxc_hdmi *hdmi, unsigned char *edid,
-			struct mxc_edid_cfg *cfg, struct fb_info *fbi,
-			unsigned char *override, int override_length)
+static int mxc_edid_override_get(struct mxc_hdmi *hdmi,
+			unsigned char *data, int num_blocks_max)
 {
-	int extblknum;
-	int j, ret;
+	int num_ext_blocks;
 
-	if (!edid || !cfg || !fbi)
-		return -EINVAL;
-
-	/* reset edid data zero */
-	memset(edid, 0, EDID_LENGTH*4);
-	memset(cfg, 0, sizeof(struct mxc_edid_cfg));
-
-	/* Check first three byte of EDID head */
-	if ((override_length < 128) ||
-	    (override[0] != 0x00) ||
-	    (override[1] != 0xFF) ||
-	    (override[2] != 0xFF)) {
-		dev_info(&hdmi->pdev->dev, "EDID head check failed!");
+	if (hdmi->override_edid_length < EDID_LENGTH ||
+	    !mxc_edid_get_ext_blks(hdmi->override_edid, &num_ext_blocks)) {
+		dev_err(&hdmi->pdev->dev, "EDID override header check failed!");
 		return -ENOENT;
 	}
 
-	memcpy(edid, override, 128);
+	if (num_ext_blocks > num_blocks_max - 1)
+		num_ext_blocks = num_blocks_max - 1;
 
-	extblknum = edid[0x7E];
-	if (extblknum == 255)
-		extblknum = 0;
-	if (((extblknum + 1) * 128) > override_length)
-		extblknum = (override_length >> 7) - 1;
+	if ((num_ext_blocks + 1) * EDID_LENGTH > hdmi->override_edid_length)
+		num_ext_blocks = (hdmi->override_edid_length / EDID_LENGTH) - 1;
 
-	if (extblknum)
-		memcpy(&edid[EDID_LENGTH], &override[128], 128);
-
-	/* edid first block parsing */
-	memset(&fbi->monspecs, 0, sizeof(fbi->monspecs));
-	fb_edid_to_monspecs(edid, &fbi->monspecs);
-
-	if (extblknum) {
-		ret = mxc_edid_parse_ext_blk(edid + EDID_LENGTH,
-				cfg, &fbi->monspecs);
-		if (ret < 0)
-			return -ENOENT;
-	}
-
-	/* need read segment block? */
-	if (extblknum > 1) {
-		for (j = 2; j <= extblknum; j++) {
-			/* edid ext block parsing */
-			ret = mxc_edid_parse_ext_blk(&override[j * 128],
-					cfg, &fbi->monspecs);
-			if (ret < 0)
-				return -ENOENT;
-		}
-	}
-	return 0;
+	memcpy(data, hdmi->override_edid, (num_ext_blocks + 1) * EDID_LENGTH);
+	return num_ext_blocks;
 }
 
-static int mxc_edid_read_internal(struct mxc_hdmi *hdmi, unsigned char *edid,
-			struct mxc_edid_cfg *cfg, struct fb_info *fbi)
+static int mxc_edid_internal_get(struct mxc_hdmi *hdmi,
+			unsigned char *data, int num_blocks_max)
 {
-	int extblknum;
-	int i, j, ret;
-	unsigned char *ediddata = edid;
-	unsigned char tmpedid[EDID_LENGTH];
-
-	dev_info(&hdmi->pdev->dev, "%s\n", __func__);
-
-	if (!edid || !cfg || !fbi)
-		return -EINVAL;
+	int i, block_num = 0, num_ext_blocks = 0;
 
 	/* init HDMI I2CM for read edid*/
 	hdmi_writeb(0x0, HDMI_I2CM_DIV);
@@ -1703,86 +1661,41 @@ static int mxc_edid_read_internal(struct mxc_hdmi *hdmi, unsigned char *edid,
 		    HDMI_I2CM_CTLINT_ARBITRATION_POL,
 		    HDMI_I2CM_CTLINT);
 
-	/* reset edid data zero */
-	memset(edid, 0, EDID_LENGTH*4);
-	memset(cfg, 0, sizeof(struct mxc_edid_cfg));
+	do {
+		for (i = 0; i < EDID_LENGTH; i++)
+			*data++ = hdmi_edid_i2c_read(hdmi, i, block_num);
 
-	/* Check first three byte of EDID head */
-	if (!(hdmi_edid_i2c_read(hdmi, 0, 0) == 0x00) ||
-		!(hdmi_edid_i2c_read(hdmi, 1, 0) == 0xFF) ||
-		!(hdmi_edid_i2c_read(hdmi, 2, 0) == 0xFF)) {
-		dev_info(&hdmi->pdev->dev, "EDID head check failed!");
-		return -ENOENT;
-	}
-
-	for (i = 0; i < 128; i++) {
-		*ediddata = hdmi_edid_i2c_read(hdmi, i, 0);
-		ediddata++;
-	}
-
-	extblknum = edid[0x7E];
-	if (extblknum == 255)
-		extblknum = 0;
-
-	if (extblknum) {
-		ediddata = edid + EDID_LENGTH;
-		for (i = 0; i < 128; i++) {
-			*ediddata = hdmi_edid_i2c_read(hdmi, i, 1);
-			ediddata++;
-		}
-	}
-
-	/* edid first block parsing */
-	memset(&fbi->monspecs, 0, sizeof(fbi->monspecs));
-	fb_edid_to_monspecs(edid, &fbi->monspecs);
-
-	if (extblknum) {
-		ret = mxc_edid_parse_ext_blk(edid + EDID_LENGTH,
-				cfg, &fbi->monspecs);
-		if (ret < 0)
-			return -ENOENT;
-	}
-
-	/* need read segment block? */
-	if (extblknum > 1) {
-		for (j = 2; j <= extblknum; j++) {
-			for (i = 0; i < 128; i++)
-				tmpedid[i] = hdmi_edid_i2c_read(hdmi, i, j);
-
-			/* edid ext block parsing */
-			ret = mxc_edid_parse_ext_blk(tmpedid,
-					cfg, &fbi->monspecs);
-			if (ret < 0)
+		if (block_num++ == 0) {
+			if (!mxc_edid_get_ext_blks(data - EDID_LENGTH, &num_ext_blocks)) {
+				dev_err(&hdmi->pdev->dev, "EDID internal header check failed!");
 				return -ENOENT;
-		}
-	}
+			}
 
-	return 0;
+			if (num_ext_blocks > num_blocks_max - 1)
+				num_ext_blocks = num_blocks_max - 1;
+		}
+	} while (block_num <= num_ext_blocks);
+
+	return num_ext_blocks;
 }
 
 static int mxc_hdmi_read_edid(struct mxc_hdmi *hdmi)
 {
-	int ret = -EINVAL;
-	u8 edid_old[HDMI_EDID_LEN];
-	u8 clkdis;
+	int ret;
+	u8 clkdis, edid_new[HDMI_EDID_LEN] = { 0 };
+	const int num_blks_max = HDMI_EDID_LEN / EDID_LENGTH;
 
 	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
 
-	/* save old edid */
-	memcpy(edid_old, hdmi->edid, HDMI_EDID_LEN);
-
 	if (hdmi->override_edid) {
-		ret = mxc_edid_override(hdmi, hdmi->edid, &hdmi->edid_cfg,
-				hdmi->fbi, hdmi->override_edid,
-				hdmi->override_edid_length);
-	}
-
-	if (!ret) {
+		/* EDID loaded from device tree */
+		ret = mxc_edid_override_get(hdmi, edid_new, num_blks_max);
 	} else if (!hdcp_init) {
-		ret = mxc_edid_read(hdmi_i2c->adapter, hdmi_i2c->addr,
-				hdmi->edid, &hdmi->edid_cfg, hdmi->fbi);
+		/* Read EDID via I2C when HDCP disabled */
+		ret = mxc_edid_external_get(hdmi_i2c->adapter,
+			hdmi_i2c->addr, edid_new, num_blks_max);
 	} else {
-		/* Read EDID via HDMI DDC when HDCP Enable */
+		/* Read EDID via HDMI DDC when HDCP enabled */
 
 		/* Disable HDCP clk */
 		if (hdmi->hdmi_data.hdcp_enable) {
@@ -1791,8 +1704,7 @@ static int mxc_hdmi_read_edid(struct mxc_hdmi *hdmi)
 			hdmi_writeb(clkdis, HDMI_MC_CLKDIS);
 		}
 
-		ret = mxc_edid_read_internal(hdmi, hdmi->edid,
-				&hdmi->edid_cfg, hdmi->fbi);
+		ret = mxc_edid_internal_get(hdmi, edid_new, num_blks_max);
 
 		/* Enable HDCP clk */
 		if (hdmi->hdmi_data.hdcp_enable) {
@@ -1800,20 +1712,24 @@ static int mxc_hdmi_read_edid(struct mxc_hdmi *hdmi)
 			clkdis &= ~HDMI_MC_CLKDIS_HDCPCLK_DISABLE;
 			hdmi_writeb(clkdis, HDMI_MC_CLKDIS);
 		}
-
 	}
+
 	if (ret < 0) {
 		dev_dbg(&hdmi->pdev->dev, "read failed\n");
 		return HDMI_EDID_FAIL;
 	}
 
-	/* Save edid cfg for audio driver */
-	hdmi_set_edid_cfg(&hdmi->edid_cfg);
-
-	if (!memcmp(edid_old, hdmi->edid, HDMI_EDID_LEN)) {
-		dev_info(&hdmi->pdev->dev, "same edid\n");
+	if (memcmp(hdmi->edid, edid_new, HDMI_EDID_LEN) == 0) {
+		dev_dbg(&hdmi->pdev->dev, "same edid\n");
 		return HDMI_EDID_SAME;
 	}
+
+	/* Now parse the information... */
+	memcpy(hdmi->edid, edid_new, HDMI_EDID_LEN);
+	mxc_edid_parse(hdmi->edid, ret, &hdmi->edid_cfg, hdmi->fbi);
+
+	/* Save edid cfg for audio driver */
+	hdmi_set_edid_cfg(&hdmi->edid_cfg);
 
 	if (hdmi->fbi->monspecs.modedb_len == 0) {
 		dev_info(&hdmi->pdev->dev, "No modes read from edid\n");
@@ -1955,7 +1871,7 @@ static void mxc_hdmi_notify_fb(struct mxc_hdmi *hdmi)
 
 static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 {
-	int i;
+	int i, pass;
 	struct fb_videomode *mode;
 
 	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
@@ -1965,27 +1881,30 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 	fb_destroy_modelist(&hdmi->fbi->modelist);
 	fb_add_videomode(&vga_mode, &hdmi->fbi->modelist);
 
-	for (i = 0; i < hdmi->fbi->monspecs.modedb_len; i++) {
-		/*
-		 * We might check here if mode is supported by HDMI.
-		 * We do not currently support interlaced modes.
-		 * And add CEA modes in the modelist.
-		 */
-		mode = &hdmi->fbi->monspecs.modedb[i];
+	hdmi->allow_non_cea = !hdmi->edid_cfg.hdmi_cap || !only_cea;
 
-		if (!(mode->vmode & FB_VMODE_INTERLACED) &&
-				(!only_cea || mxc_edid_mode_to_vic(mode))) {
+	for (pass = 0; pass < 2; pass++) {
+		/* Start from the end because fb_add_videomode() will prepend new entries */
+		for (i = hdmi->fbi->monspecs.modedb_len - 1; i >= 0; i--) {
+			mode = &hdmi->fbi->monspecs.modedb[i];
 
-			dev_dbg(&hdmi->pdev->dev, "Added mode %d:", i);
-			dev_dbg(&hdmi->pdev->dev,
-				"xres = %d, yres = %d, freq = %d, vmode = %d, flag = %d\n",
-				hdmi->fbi->monspecs.modedb[i].xres,
-				hdmi->fbi->monspecs.modedb[i].yres,
-				hdmi->fbi->monspecs.modedb[i].refresh,
-				hdmi->fbi->monspecs.modedb[i].vmode,
-				hdmi->fbi->monspecs.modedb[i].flag);
+			/* Process 'detailed' modes in second pass */
+			if (pass != !!(mode->flag & FB_MODE_IS_DETAILED))
+				continue;
 
-			fb_add_videomode(mode, &hdmi->fbi->modelist);
+			if (hdmi->allow_non_cea || mxc_edid_mode_to_vic(mode)) {
+
+				dev_dbg(&hdmi->pdev->dev, "Added mode %d:", i);
+				dev_dbg(&hdmi->pdev->dev,
+					"xres = %d, yres = %d, freq = %d, vmode = %d, flag = %d\n",
+					hdmi->fbi->monspecs.modedb[i].xres,
+					hdmi->fbi->monspecs.modedb[i].yres,
+					hdmi->fbi->monspecs.modedb[i].refresh,
+					hdmi->fbi->monspecs.modedb[i].vmode,
+					hdmi->fbi->monspecs.modedb[i].flag);
+
+				fb_add_videomode(mode, &hdmi->fbi->modelist);
+			}
 		}
 	}
 
@@ -2002,7 +1921,6 @@ static void  mxc_hdmi_default_edid_cfg(struct mxc_hdmi *hdmi)
 
 static void  mxc_hdmi_default_modelist(struct mxc_hdmi *hdmi)
 {
-	struct fb_modelist *modelist;
 	struct fb_videomode *m;
 
 	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
@@ -2016,9 +1934,8 @@ static void  mxc_hdmi_default_modelist(struct mxc_hdmi *hdmi)
 
 	/* If the current modelist is already default, don't re-create it*/
 	if (list_is_singular(&hdmi->fbi->modelist)) {
-		modelist = list_entry((&hdmi->fbi->modelist)->next,
-				struct fb_modelist, list);
-		m = &modelist->mode;
+		m = &list_first_entry(&hdmi->fbi->modelist,
+					struct fb_modelist, list)->mode;
 		if (fb_mode_is_equal(m, &hdmi->default_mode)) {
 			dev_info(&hdmi->pdev->dev,
 				"Modelist is already default, no need to re-create!\n");
@@ -2047,7 +1964,7 @@ static void mxc_hdmi_set_mode_to_vga_dvi(struct mxc_hdmi *hdmi)
 	hdmi->requesting_vga_for_initialization = false;
 }
 
-static void mxc_hdmi_set_mode(struct mxc_hdmi *hdmi)
+static void mxc_hdmi_set_mode(struct mxc_hdmi *hdmi, bool force_new)
 {
 	const struct fb_videomode *mode;
 	struct fb_videomode m;
@@ -2065,7 +1982,7 @@ static void mxc_hdmi_set_mode(struct mxc_hdmi *hdmi)
 	fb_var_to_videomode(&m, &var);
 	dump_fb_videomode(&m);
 
-	mode = fb_find_nearest_mode(&m, &hdmi->fbi->modelist);
+	mode = mxc_fb_find_nearest_mode(&m, &hdmi->fbi->modelist);
 	if (!mode) {
 		pr_err("%s: could not find mode in modelist\n", __func__);
 		return;
@@ -2073,7 +1990,7 @@ static void mxc_hdmi_set_mode(struct mxc_hdmi *hdmi)
 
 	/* If both video mode and work mode same as previous,
 	 * init HDMI again */
-	if (fb_mode_is_equal(&hdmi->previous_non_vga_mode, mode) &&
+	if (!force_new && fb_mode_is_equal(&hdmi->previous_non_vga_mode, mode) &&
 		(hdmi->edid_cfg.hdmi_cap != hdmi->hdmi_data.video_mode.mDVI)) {
 		dev_dbg(&hdmi->pdev->dev,
 				"%s: Video mode same as previous\n", __func__);
@@ -2086,7 +2003,7 @@ static void mxc_hdmi_set_mode(struct mxc_hdmi *hdmi)
 		dev_dbg(&hdmi->pdev->dev, "%s: New video mode\n", __func__);
 		mxc_hdmi_set_mode_to_vga_dvi(hdmi);
 		fb_videomode_to_var(&hdmi->fbi->var, mode);
-		dump_fb_videomode((struct fb_videomode *)mode);
+		dump_fb_videomode(mode);
 		mxc_hdmi_notify_fb(hdmi);
 	}
 
@@ -2095,6 +2012,7 @@ static void mxc_hdmi_set_mode(struct mxc_hdmi *hdmi)
 static void mxc_hdmi_cable_connected(struct mxc_hdmi *hdmi)
 {
 	int edid_status;
+	struct list_head modelist = hdmi->fbi->modelist;
 
 	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
 
@@ -2126,9 +2044,10 @@ static void mxc_hdmi_cable_connected(struct mxc_hdmi *hdmi)
 		mxc_hdmi_edid_rebuild_modelist(hdmi);
 		break;
 
-	/* Rebuild even if they're the same in case only_cea changed */
+	/* Rebuild only if 'allow_non_cea' has changed */
 	case HDMI_EDID_SAME:
-		mxc_hdmi_edid_rebuild_modelist(hdmi);
+		if (hdmi->allow_non_cea != (!hdmi->edid_cfg.hdmi_cap || !only_cea))
+			mxc_hdmi_edid_rebuild_modelist(hdmi);
 		break;
 
 	case HDMI_EDID_FAIL:
@@ -2141,7 +2060,8 @@ static void mxc_hdmi_cable_connected(struct mxc_hdmi *hdmi)
 	}
 
 	/* Setting video mode */
-	mxc_hdmi_set_mode(hdmi);
+	mxc_hdmi_set_mode(hdmi,
+		memcmp(&modelist, &hdmi->fbi->modelist, sizeof(modelist)) != 0);
 
 	dev_dbg(&hdmi->pdev->dev, "%s exit\n", __func__);
 }
@@ -2198,26 +2118,22 @@ static void hotplug_worker(struct work_struct *work)
 	dev_dbg(&hdmi->pdev->dev, "hdmi_phy_stat0=0x%x, hdmi_phy_pol0=0x%x\n",
 			hdmi_phy_stat0, hdmi_phy_pol0);
 
-	/* Make HPD intr active low to capture unplug event or
-	 * active high to capture plugin event */
-	hdmi_writeb((HDMI_DVI_STAT & ~hdmi_phy_stat0), HDMI_PHY_POL0);
-
 	/* check cable status */
 	if (hdmi_phy_stat0 & HDMI_DVI_STAT) {
-		/* Plugin event */
-		dev_dbg(&hdmi->pdev->dev, "EVENT=plugin\n");
-		mxc_hdmi_cable_connected(hdmi);
+		if (!hdmi->cable_plugin) {
+			/* Plugin event */
+			dev_dbg(&hdmi->pdev->dev, "EVENT=plugin\n");
+			mxc_hdmi_cable_connected(hdmi);
+			hdmi_set_cable_state(1);
 
-		hdmi_set_cable_state(1);
-
-		sprintf(event_string, "EVENT=plugin");
-		kobject_uevent_env(&hdmi->pdev->dev.kobj, KOBJ_CHANGE, envp);
+			sprintf(event_string, "EVENT=plugin");
+			kobject_uevent_env(&hdmi->pdev->dev.kobj, KOBJ_CHANGE, envp);
 #ifdef CONFIG_MXC_HDMI_CEC
-		mxc_hdmi_cec_handle(0x80);
+			if (hdmi->edid_cfg.hdmi_cap)
+				mxc_hdmi_cec_handle(0x80);
 #endif
-		if (keepalive)
-                        hdmi_writeb(HDMI_DVI_STAT, HDMI_PHY_POL0);
-	} else if (!keepalive) {
+		}
+	} else if (hdmi->cable_plugin && !keepalive) {
 		/* Plugout event */
 		dev_dbg(&hdmi->pdev->dev, "EVENT=plugout\n");
 		hdmi_set_cable_state(0);
@@ -2227,7 +2143,8 @@ static void hotplug_worker(struct work_struct *work)
 		sprintf(event_string, "EVENT=plugout");
 		kobject_uevent_env(&hdmi->pdev->dev.kobj, KOBJ_CHANGE, envp);
 #ifdef CONFIG_MXC_HDMI_CEC
-		mxc_hdmi_cec_handle(0x100);
+		if (hdmi->edid_cfg.hdmi_cap)
+			mxc_hdmi_cec_handle(0x100);
 #endif
 	}
 
@@ -2236,6 +2153,9 @@ static void hotplug_worker(struct work_struct *work)
 	spin_lock_irqsave(&hdmi->irq_lock, flags);
 
 	if (!keepalive) {
+		/* Make HPD interrupt sensitive for the opposite level */
+		hdmi_writeb((HDMI_DVI_STAT & ~hdmi_phy_stat0), HDMI_PHY_POL0);
+
 		/* Re-enable HPD interrupts */
 		hdmi_phy_mask0 = hdmi_readb(HDMI_PHY_MASK0);
 		hdmi_phy_mask0 &= ~HDMI_DVI_STAT;
@@ -2308,7 +2228,8 @@ static irqreturn_t mxc_hdmi_hotplug(int irq, void *data)
 		/* Clear Hotplug interrupts */
 		hdmi_writeb(HDMI_DVI_IH_STAT, HDMI_IH_PHY_STAT0);
 
-		schedule_delayed_work(&(hdmi->hotplug_work), msecs_to_jiffies(20));
+		/* Note: the delay is for debouncing */
+		schedule_delayed_work(&(hdmi->hotplug_work), msecs_to_jiffies(500));
 	}
 
 	/* Check HDCP  interrupt state */
@@ -2345,14 +2266,19 @@ static void mxc_hdmi_setup(struct mxc_hdmi *hdmi, unsigned long event)
 		memcpy(&hdmi->previous_non_vga_mode, &m,
 		       sizeof(struct fb_videomode));
 		if (!list_empty(&hdmi->fbi->modelist)) {
-			edid_mode = fb_find_nearest_mode(&m, &hdmi->fbi->modelist);
-			pr_debug("edid mode ");
-			dump_fb_videomode((struct fb_videomode *)edid_mode);
-			/* update fbi mode */
-			hdmi->fbi->mode = (struct fb_videomode *)edid_mode;
-			hdmi->vic = mxc_edid_mode_to_vic(edid_mode);
+			edid_mode = mxc_fb_find_nearest_mode(&m, &hdmi->fbi->modelist);
+			if (edid_mode) {
+				pr_debug("edid mode ");
+				dump_fb_videomode(edid_mode);
+				/* update fbi mode */
+				hdmi->fbi->mode = (struct fb_videomode *)edid_mode;
+				hdmi->vic = mxc_edid_mode_to_vic(edid_mode);
+			}
 		}
 	}
+
+	if (hdmi->blank != FB_BLANK_UNBLANK)
+		return;
 
 	hdmi_disable_overflow_interrupts();
 
@@ -2372,6 +2298,7 @@ static void mxc_hdmi_setup(struct mxc_hdmi *hdmi, unsigned long event)
 	else
 		hdmi->hdmi_data.colorimetry = eITU709;
 
+#ifdef	PIXEL_REPETITION_FIXED
 	if ((hdmi->vic == 10) || (hdmi->vic == 11) ||
 		(hdmi->vic == 12) || (hdmi->vic == 13) ||
 		(hdmi->vic == 14) || (hdmi->vic == 15) ||
@@ -2382,6 +2309,7 @@ static void mxc_hdmi_setup(struct mxc_hdmi *hdmi, unsigned long event)
 		(hdmi->vic == 37) || (hdmi->vic == 38))
 		hdmi->hdmi_data.video_mode.mPixelRepetitionOutput = 1;
 	else
+#endif	  
 		hdmi->hdmi_data.video_mode.mPixelRepetitionOutput = 0;
 
 	hdmi->hdmi_data.video_mode.mPixelRepetitionInput = 0;
@@ -2638,10 +2566,10 @@ static void hdmi_get_of_property(struct mxc_hdmi *hdmi)
 static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 			      struct mxc_dispdrv_setting *setting)
 {
-	int ret = 0;
 	u32 i;
-	const struct fb_videomode *mode;
+	int ret;
 	struct fb_videomode m;
+	const struct fb_videomode *mode, *native;
 	struct mxc_hdmi *hdmi = mxc_dispdrv_getdata(disp);
 	int irq = platform_get_irq(hdmi->pdev, 0);
 	int edid_status = HDMI_EDID_FAIL;
@@ -2751,45 +2679,55 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 
 	spin_lock_init(&hdmi->irq_lock);
 
-	/* Set the default mode and modelist when disp init. */
-	fb_find_mode(&hdmi->fbi->var, hdmi->fbi,
-		     hdmi->dft_mode_str, NULL, 0, NULL,
-		     hdmi->default_bpp);
-
 	if (hdmi->override_edid)
 		edid_status = mxc_hdmi_read_edid(hdmi);
+
+	/* Set initial modelist */
 	switch (edid_status) {
 	case HDMI_EDID_SUCCESS:
 	case HDMI_EDID_SAME:
 		mxc_hdmi_edid_rebuild_modelist(hdmi);
+		native = &list_first_entry(&hdmi->fbi->modelist,
+					struct fb_modelist, list)->mode;
 		break;
 	default:
 		console_lock();
 
 		fb_destroy_modelist(&hdmi->fbi->modelist);
+		fb_add_videomode(&vga_mode, &hdmi->fbi->modelist);
 
-		/*Add all no interlaced CEA mode to default modelist */
-		for (i = 0; i < ARRAY_SIZE(mxc_cea_mode); i++) {
+		/*Add all CEA modes to default modelist */
+		for (i = 2; i < ARRAY_SIZE(mxc_cea_mode); i++) {
 			mode = &mxc_cea_mode[i];
-			if (!(mode->vmode & FB_VMODE_INTERLACED) && (mode->xres != 0)) {
+			if (mode->xres != 0) {
 				struct fb_videomode m = *mode;
-				 m.flag |= FB_MODE_IS_STANDARD;
-				fb_add_videomode(mode, &hdmi->fbi->modelist);
+
+				/* Set FB_MODE_IS_STANDARD only if no alternate aspect ratio exists */
+				m.vmode ^= FB_VMODE_ASPECT_MASK;
+				if (!fb_mode_is_equal(&m, mode - 1))
+					m.flag |= FB_MODE_IS_STANDARD;
+				m.vmode ^= FB_VMODE_ASPECT_MASK;
+
+				fb_add_videomode(&m, &hdmi->fbi->modelist);
 			}
 		}
 
 		console_unlock();
+		native = &vga_mode;
 	}
 
+	/* Set the default mode */
+	fb_find_mode(&hdmi->fbi->var, hdmi->fbi,
+		hdmi->dft_mode_str, NULL, 0, native, hdmi->default_bpp);
 
-	/* Find a nearest mode in default modelist */
+	/* Find nearest mode in default modelist */
 	fb_var_to_videomode(&m, &hdmi->fbi->var);
 
 	hdmi->dft_mode_set = false;
-	mode = fb_find_nearest_mode(&m, &hdmi->fbi->modelist);
+	mode = mxc_fb_find_nearest_mode(&m, &hdmi->fbi->modelist);
 	if (!mode) {
-		pr_err("%s: could not find mode in modelist\n", __func__);
-		return -1;
+		pr_warn("%s: Could not find default mode in modelist\n", __func__);
+		mode = native;
 	}
 	dump_fb_videomode(mode);
 	/* Save default video mode */
@@ -2802,21 +2740,6 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 
 	/* Default setting HDMI working in HDMI mode*/
 	hdmi->edid_cfg.hdmi_cap = true;
-
-	INIT_DELAYED_WORK(&hdmi->hotplug_work, hotplug_worker);
-	INIT_DELAYED_WORK(&hdmi->hdcp_hdp_work, hdcp_hdp_worker);
-
-	/* Configure registers related to HDMI interrupt
-	 * generation before registering IRQ. */
-	hdmi_writeb(HDMI_DVI_STAT, HDMI_PHY_POL0);
-
-	/* Clear Hotplug interrupts */
-	hdmi_writeb(HDMI_DVI_IH_STAT, HDMI_IH_PHY_STAT0);
-
-	hdmi->nb.notifier_call = mxc_hdmi_fb_event;
-	ret = fb_register_client(&hdmi->nb);
-	if (ret < 0)
-		goto efbclient;
 
 	memset(&hdmi->hdmi_data, 0, sizeof(struct hdmi_data_info));
 
@@ -2833,6 +2756,16 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 		hdmi->hdmi_data.rgb_quant_range = HDMI_FC_AVICONF2_RGB_QUANT_MASK;
 	}
 
+	INIT_DELAYED_WORK(&hdmi->hotplug_work, hotplug_worker);
+	INIT_DELAYED_WORK(&hdmi->hdcp_hdp_work, hdcp_hdp_worker);
+
+	/* Configure registers related to HDMI interrupt
+	 * generation before registering IRQ. */
+	hdmi_writeb(HDMI_DVI_STAT, HDMI_PHY_POL0);
+
+	/* Clear Hotplug interrupts */
+	hdmi_writeb(HDMI_DVI_IH_STAT, HDMI_IH_PHY_STAT0);
+
 	ret = devm_request_irq(&hdmi->pdev->dev, irq, mxc_hdmi_hotplug, IRQF_SHARED,
 			dev_name(&hdmi->pdev->dev), hdmi);
 	if (ret < 0) {
@@ -2840,6 +2773,11 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 			"Unable to request irq: %d\n", ret);
 		goto ereqirq;
 	}
+
+	hdmi->nb.notifier_call = mxc_hdmi_fb_event;
+	ret = fb_register_client(&hdmi->nb);
+	if (ret < 0)
+		goto efbclient;
 
 	ret = device_create_file(&hdmi->pdev->dev, &dev_attr_fb_name);
 	if (ret < 0)
